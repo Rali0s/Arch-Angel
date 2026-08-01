@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Arch Angel - The Art of Systems</title>
+  <link rel="icon" type="image/png" href="/assets/arch-angel-logo.png">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #050b12;
+      --panel: #0b1723;
+      --panel2: #0f2233;
+      --line: #20384b;
+      --text: #eef6fa;
+      --muted: #83a0b4;
+      --blue: #2494f2;
+      --cyan: #36d7e9;
+      --green: #3ed18b;
+      --amber: #ffb84d;
+      --red: #ff6666;
+      --purple: #9578ff;
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html { min-height: 100%; background: var(--bg); }
+    body { min-height: 100vh; margin: 0; color: var(--text); font: 14px/1.45 Inter, ui-sans-serif, system-ui, sans-serif; background: radial-gradient(circle at 15% 0%, #112c42 0, var(--bg) 36%); }
+    button, input, select, textarea { font: inherit; }
+
+    /* Music intro */
+    .intro { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; overflow: hidden; background: radial-gradient(circle at 50% 35%, #123952 0, #07111c 42%, #020609 100%); transition: opacity .8s ease, visibility .8s ease; }
+    .intro::before { content: ""; position: absolute; width: 780px; height: 780px; border: 1px solid rgba(54,215,233,.15); border-radius: 50%; box-shadow: 0 0 0 90px rgba(54,215,233,.025), 0 0 0 180px rgba(54,215,233,.018); animation: drift 8s linear infinite; }
+    .intro.done { opacity: 0; visibility: hidden; pointer-events: none; }
+    @keyframes drift { to { transform: rotate(360deg) scale(1.04); } }
+    .intro-card { position: relative; z-index: 2; width: min(720px, 90vw); text-align: center; }
+    .eyebrow { color: var(--cyan); font-size: 11px; font-weight: 800; letter-spacing: .32em; text-transform: uppercase; }
+    .intro-logo { display: block; width: min(330px, 62vw); aspect-ratio: 1; margin: 17px auto 8px; border-radius: 22%; object-fit: cover; filter: drop-shadow(0 20px 42px rgba(0,0,0,.52)) drop-shadow(0 0 24px rgba(36,148,242,.16)); }
+    .intro h1 { margin: 18px 0 4px; font-size: clamp(48px, 9vw, 92px); line-height: .94; letter-spacing: -.06em; }
+    .intro h1 span { display: block; color: transparent; -webkit-text-stroke: 1px rgba(255,102,102,.72); text-shadow: 0 0 38px rgba(255,70,50,.14); }
+    .intro-copy { max-width: 590px; margin: 20px auto 0; color: #9db7c8; font-size: 15px; }
+    .equalizer { height: 86px; margin: 30px auto 18px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .bar { width: 5px; height: 9px; border-radius: 9px; background: linear-gradient(var(--cyan), var(--blue)); box-shadow: 0 0 18px rgba(54,215,233,.35); }
+    .intro.playing .bar { animation: beat .28s steps(2,end) infinite alternate; animation-delay: calc(var(--i) * -31ms); }
+    @keyframes beat { from { height: 8px; opacity: .45; } to { height: calc(22px + (var(--i) % 6) * 8px); opacity: 1; } }
+    .intro-actions { display: flex; gap: 10px; justify-content: center; }
+    .primary, .ghost { border-radius: 999px; padding: 12px 22px; cursor: pointer; color: var(--text); font-weight: 800; letter-spacing: .02em; }
+    .primary { border: 1px solid #228bdc; background: linear-gradient(180deg,#1c99f4,#0c69ad); box-shadow: 0 10px 35px rgba(36,148,242,.25); }
+    .ghost { border: 1px solid #315066; background: rgba(5,15,24,.55); }
+    .intro-progress { width: min(420px, 80vw); height: 2px; margin: 24px auto 0; background: rgba(255,255,255,.09); overflow: hidden; }
+    .intro-progress span { display: block; width: 0; height: 100%; background: linear-gradient(90deg,var(--cyan),var(--purple)); }
+    .intro.playing .intro-progress span { animation: progress 6.4s linear forwards; }
+    @keyframes progress { to { width: 100%; } }
+
+    /* App shell */
+    .app { min-height: 100vh; opacity: 1; transition: opacity .8s ease; }
+    .app.waiting { opacity: 0; }
+    header { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 14px 26px; background: rgba(5,11,18,.91); border-bottom: 1px solid var(--line); backdrop-filter: blur(16px); }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-logo { width: 39px; height: 39px; border: 1px solid #297ba7; border-radius: 11px; object-fit: cover; box-shadow: 0 0 16px rgba(54,215,233,.14); }
+    .brand-mark { width: 33px; height: 33px; display: grid; place-items: center; border: 1px solid #297ba7; border-radius: 9px; color: var(--cyan); background: #0a1b29; font-weight: 900; box-shadow: inset 0 0 16px rgba(54,215,233,.1); }
+    .brand strong { display: block; letter-spacing: .04em; }
+    .brand small { color: var(--muted); }
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+    .status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 12px currentColor; }
+    .dot.ok { background: var(--green); }
+    .dot.bad { background: var(--red); }
+    .replay { width: auto; border: 1px solid #28475d; border-radius: 8px; background: #091725; color: #aec6d5; padding: 8px 11px; cursor: pointer; }
+    .shell { max-width: 1320px; margin: auto; padding: 20px 26px 50px; }
+    .hero { display: flex; align-items: end; justify-content: space-between; gap: 30px; margin: 8px 0 19px; }
+    .hero h2 { margin: 0; font-size: clamp(27px,4vw,43px); letter-spacing: -.035em; }
+    .hero h2 span { color: var(--cyan); }
+    .hero p { max-width: 620px; margin: 8px 0 0; color: var(--muted); }
+    .hero-badge { flex: 0 0 auto; padding: 8px 12px; border: 1px solid #27566d; border-radius: 99px; color: #a7d7e6; font: 11px ui-monospace, monospace; }
+    nav { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; padding: 6px; margin-bottom: 16px; border: 1px solid var(--line); border-radius: 12px; background: #07131e; }
+    .nav-button { display: flex; align-items: center; gap: 10px; border: 0; border-radius: 8px; padding: 11px 13px; cursor: pointer; color: #8da9ba; background: transparent; text-align: left; }
+    .nav-button b { color: inherit; font-size: 12px; letter-spacing: .04em; }
+    .nav-button span { display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid #2a475a; border-radius: 7px; font: 10px ui-monospace, monospace; }
+    .nav-button.active { color: var(--text); background: linear-gradient(180deg,#112b40,#0c2031); box-shadow: inset 0 0 0 1px #28506b; }
+    .workspace { animation: appear .3s ease; }
+    @keyframes appear { from { opacity: .3; transform: translateY(4px); } }
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: 14px; }
+    .metric, .panel { border: 1px solid var(--line); background: linear-gradient(145deg, rgba(15,34,51,.97), rgba(8,22,34,.97)); border-radius: 12px; box-shadow: 0 12px 36px rgba(0,0,0,.14); }
+    .metric { padding: 15px 17px; }
+    .metric label { display: block; color: var(--muted); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+    .metric strong { display: block; margin-top: 4px; font-size: 25px; }
+    .grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 14px; }
+    .panel { padding: 17px; min-width: 0; }
+    .panel h3 { margin: 0 0 13px; color: #bed4e2; font-size: 12px; letter-spacing: .09em; text-transform: uppercase; }
+    .device { display: grid; grid-template-columns: 1fr auto; gap: 7px 15px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: rgba(4,13,21,.45); margin-bottom: 8px; }
+    .device strong { color: var(--cyan); }
+    .sub { color: var(--muted); font-size: 11px; }
+    .caps { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 5px; }
+    .tag { padding: 3px 7px; border: 1px solid #285577; border-radius: 99px; color: #9fd5ff; font: 10px ui-monospace, monospace; }
+    form { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .wide { grid-column: 1 / -1; }
+    label.field { display: grid; gap: 5px; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .07em; }
+    input, select { width: 100%; border: 1px solid #29495f; border-radius: 8px; background: #06131f; color: var(--text); padding: 10px; }
+    .action-button { width: 100%; border: 1px solid #1476bd; border-radius: 8px; background: linear-gradient(180deg,#1683d7,#0b64a7); color: var(--text); padding: 10px 11px; cursor: pointer; font-weight: 800; }
+    .action-button.secondary { border-color: #2a596f; background: linear-gradient(180deg,#15364a,#10293a); }
+    .message { min-height: 18px; color: var(--muted); font-size: 11px; }
+    .message.ok { color: var(--green); }
+    .message.bad { color: var(--red); }
+    .list { display: grid; gap: 7px; max-height: 310px; overflow: auto; padding-right: 3px; }
+    .row { padding: 10px 11px; border-left: 3px solid var(--blue); background: rgba(4,13,21,.55); border-radius: 5px; }
+    .row.success { border-color: var(--green); }
+    .row.failure { border-color: var(--red); }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .row code { color: #b9d9ed; font-size: 10px; overflow-wrap: anywhere; }
+    pre { margin: 6px 0 0; color: #b8ccd9; white-space: pre-wrap; word-break: break-word; font-size: 11px; line-height: 1.45; }
+    .empty { padding: 21px 9px; color: var(--muted); text-align: center; border: 1px dashed var(--line); border-radius: 8px; }
+
+    /* Scanner */
+    .scanner-layout { display: grid; grid-template-columns: 330px 1fr; gap: 14px; }
+    .scanner-target { display: grid; place-items: center; min-height: 165px; border: 1px solid #285168; border-radius: 11px; background: radial-gradient(circle,#12344a,#081722 66%); text-align: center; }
+    .scanner-target .rings { width: 88px; height: 88px; display: grid; place-items: center; border: 1px solid rgba(54,215,233,.5); border-radius: 50%; box-shadow: 0 0 0 17px rgba(54,215,233,.06), 0 0 0 34px rgba(54,215,233,.03); color: var(--cyan); font: 11px ui-monospace, monospace; }
+    .port-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 9px; }
+    .port { padding: 13px; border: 1px solid var(--line); border-radius: 9px; background: #071520; }
+    .port-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .port strong { color: #c9dce7; }
+    .state { padding: 3px 7px; border-radius: 99px; font: 9px ui-monospace, monospace; }
+    .state.open { color: #7af0b1; border: 1px solid #2c8a5c; background: rgba(62,209,139,.1); }
+    .state.closed { color: #91a9b9; border: 1px solid #3a5364; background: rgba(131,160,180,.06); }
+    .scanner-note { margin-top: 12px; padding: 12px; border-left: 3px solid var(--amber); background: rgba(255,184,77,.06); color: #c5af8e; font-size: 11px; }
+
+    /* ASL lab */
+    .asl-layout { display: grid; grid-template-columns: 210px 1fr 280px; gap: 14px; }
+    .hook-list { display: grid; gap: 7px; }
+    .hook-button { border: 1px solid var(--line); border-radius: 8px; padding: 10px; background: #071520; color: #91aabc; cursor: pointer; text-align: left; }
+    .hook-button.active { color: var(--text); border-color: #2187c9; background: #0e2a3f; }
+    .hook-button b { display: block; color: var(--cyan); font-family: ui-monospace, monospace; }
+    .code-window { border: 1px solid #274256; border-radius: 10px; overflow: hidden; background: #07121c; }
+    .code-bar { display: flex; align-items: center; gap: 6px; padding: 10px 12px; background: #10283a; color: #a7c0cf; font: 10px ui-monospace, monospace; }
+    .lamp { width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+    .lamp:nth-child(2) { background: var(--amber); }
+    .lamp:nth-child(3) { background: var(--green); }
+    .code-window pre { min-height: 330px; max-height: 410px; margin: 0; padding: 17px; overflow: auto; color: #d7e8f2; font-size: 11px; }
+    .contract { display: grid; gap: 9px; }
+    .contract-item { padding: 11px; border: 1px solid var(--line); border-radius: 8px; background: #071520; }
+    .contract-item b { color: var(--green); }
+    .pipeline { display: grid; gap: 5px; margin-top: 12px; }
+    .pipe-step { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; }
+    .pipe-step span { display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid #2b536a; border-radius: 6px; color: var(--cyan); font: 9px ui-monospace, monospace; }
+    .asl-mode { display: flex; gap: 8px; margin-bottom: 12px; }
+    .mode-button { border: 1px solid #29495f; border-radius: 8px; padding: 9px 13px; background: #071520; color: #91aabc; cursor: pointer; font-weight: 800; }
+    .mode-button.active { color: var(--text); border-color: #2187c9; background: #0e2a3f; }
+    .stage-boundary { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; padding: 11px 13px; border: 1px solid #9b6822; border-radius: 9px; background: rgba(255,184,77,.07); color: #e1c18e; }
+    .stage-boundary b { color: var(--amber); font: 11px ui-monospace, monospace; letter-spacing: .08em; }
+    .patch-layout { display: grid; grid-template-columns: minmax(0,1.2fr) minmax(320px,.8fr); gap: 14px; }
+    .patch-form { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    textarea { width: 100%; border: 1px solid #29495f; border-radius: 8px; background: #06131f; color: var(--text); padding: 10px; resize: vertical; }
+    .source-editor { min-height: 365px; tab-size: 4; font: 11px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .patch-preview { min-height: 180px; max-height: 260px; overflow: auto; padding: 11px; border: 1px solid #274256; border-radius: 9px; background: #06111a; font: 10px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
+    .diff-add { color: #7af0b1; } .diff-del { color: #ff8989; } .diff-same { color: #718b9c; }
+    .analysis-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin-bottom: 9px; }
+    .analysis-item { padding: 9px; border: 1px solid var(--line); border-radius: 8px; background: #071520; }
+    .analysis-item b { display: block; color: var(--cyan); font-size: 13px; }
+    .warning-list { display: grid; gap: 6px; margin: 9px 0 12px; }
+    .warning { padding: 8px 9px; border-left: 3px solid var(--amber); background: rgba(255,184,77,.06); color: #d3bb96; font-size: 10px; }
+    .warning.blocked { border-color: var(--red); color: #ff9c9c; background: rgba(255,102,102,.06); }
+    .receipt-list { display: grid; gap: 7px; max-height: 245px; overflow: auto; }
+    .receipt { padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #071520; }
+    .receipt-head { display: flex; justify-content: space-between; gap: 10px; }
+    .receipt code { display: block; margin-top: 6px; color: #9ec7dc; overflow-wrap: anywhere; font-size: 9px; }
+    .stage-badge { flex: 0 0 auto; color: var(--amber); font: 9px ui-monospace, monospace; }
+
+    /* Manuals */
+    .manual-layout { display: grid; grid-template-columns: 320px 1fr; gap: 14px; }
+    .manual-card { padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #071520; cursor: pointer; margin-bottom: 9px; }
+    .manual-card.active { border-color: #277fba; background: #0d283c; }
+    .manual-card b { display: block; color: #d5e6ef; }
+    .manual-card span { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; }
+    .manual-link { display: inline-block; margin-top: 9px; color: var(--cyan); font-size: 11px; text-decoration: none; }
+    .pdf-frame { width: 100%; height: 690px; border: 1px solid var(--line); border-radius: 10px; background: #101820; }
+    footer { margin-top: 15px; color: var(--muted); font-size: 10px; text-align: right; }
+    @media (max-width: 980px) { .asl-layout { grid-template-columns: 190px 1fr; } .asl-layout > .panel:last-child { grid-column: 1 / -1; } .manual-layout, .scanner-layout, .patch-layout { grid-template-columns: 1fr; } }
+    @media (max-width: 760px) { .intro-logo { width: min(255px, 66vw); margin-top: 12px; } header { padding: 12px 15px; } .shell { padding: 16px 15px 40px; } .hero { display: block; } .hero-badge { display: inline-block; margin-top: 12px; } nav { grid-template-columns: repeat(2,1fr); } .metrics, .grid { grid-template-columns: repeat(2,1fr); } .grid > .panel { grid-column: 1 / -1; } .asl-layout { grid-template-columns: 1fr; } .port-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <section id="intro" class="intro" aria-label="Arch Angel music introduction">
+    <div class="intro-card">
+      <div class="eyebrow">Original heavy-metal signal sequence</div>
+      <img class="intro-logo" src="/assets/arch-angel-logo.png" alt="Arch Angel - The Art of Systems">
+      <p class="intro-copy">Palm-muted rhythm. Distorted lead. Bass, kick, snare, and cymbals. Then Remote Lab, Scanner, ASL methods, and the Arsenal.</p>
+      <div class="equalizer" aria-hidden="true">
+        <i class="bar" style="--i:1"></i><i class="bar" style="--i:2"></i><i class="bar" style="--i:3"></i><i class="bar" style="--i:4"></i><i class="bar" style="--i:5"></i><i class="bar" style="--i:6"></i><i class="bar" style="--i:7"></i><i class="bar" style="--i:8"></i><i class="bar" style="--i:9"></i><i class="bar" style="--i:10"></i><i class="bar" style="--i:11"></i><i class="bar" style="--i:12"></i><i class="bar" style="--i:13"></i><i class="bar" style="--i:14"></i><i class="bar" style="--i:15"></i><i class="bar" style="--i:16"></i><i class="bar" style="--i:17"></i><i class="bar" style="--i:18"></i>
+      </div>
+      <div class="intro-actions">
+        <button id="enterLab" class="primary" type="button">Play heavy metal + enter</button>
+        <button id="skipIntro" class="ghost" type="button">Enter quietly</button>
+      </div>
+      <div class="intro-progress"><span></span></div>
+    </div>
+  </section>
+
+  <div id="app" class="app waiting">
+    <header>
+      <div class="brand"><img class="brand-logo" src="/assets/arch-angel-logo.png" alt=""><div><strong>ARCH ANGEL</strong><small>Remote / Scanner / ASL / Manuals</small></div></div>
+      <div class="header-actions">
+        <div class="status"><span id="statusDot" class="dot"></span><span id="statusText">Connecting...</span></div>
+        <button id="replayIntro" class="replay" type="button">Replay intro</button>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="hero">
+        <div><h2>The Art of <span>Systems.</span></h2><p>Remote operations, listener evidence, ASL craft, and field manuals - four disciplines forged into one defensive command deck.</p></div>
+        <div class="hero-badge">LOOPBACK-FIRST / SIGNED JOBS / AUDITED</div>
+      </section>
+      <nav aria-label="Lab workspaces">
+        <button class="nav-button active" data-workspace="remote" type="button"><span>01</span><b>REMOTE LAB</b></button>
+        <button class="nav-button" data-workspace="scanner" type="button"><span>02</span><b>SCANNER</b></button>
+        <button class="nav-button" data-workspace="asl" type="button"><span>03</span><b>ASL LAB</b></button>
+        <button class="nav-button" data-workspace="manuals" type="button"><span>04</span><b>PDF MANUALS</b></button>
+      </nav>
+
+      <section id="workspace-remote" class="workspace">
+        <div class="metrics">
+          <div class="metric"><label>Devices</label><strong id="deviceCount">0</strong></div>
+          <div class="metric"><label>Queued</label><strong id="queuedCount">0</strong></div>
+          <div class="metric"><label>Outstanding</label><strong id="outstandingCount">0</strong></div>
+          <div class="metric"><label>Completed</label><strong id="resultCount">0</strong></div>
+        </div>
+        <div class="grid">
+          <div class="panel"><h3>Connected endpoints</h3><div id="devices"><div class="empty">Waiting for endpoint check-in...</div></div></div>
+          <div class="panel">
+            <h3>Queue fixed diagnostic action</h3>
+            <form id="jobForm">
+              <label class="field wide">Operator token<input class="token-input" id="token" type="password" autocomplete="off" placeholder="Session-only token"></label>
+              <label class="field">Device<select id="device"></select></label>
+              <label class="field">Action<select id="action"><option>ping</option><option>system_info</option><option>disk_usage</option><option>echo</option></select></label>
+              <label id="messageField" class="field wide" hidden>Echo message<input id="echoMessage" maxlength="256" placeholder="Message only; no command execution"></label>
+              <button class="action-button wide" type="submit">Queue signed job</button>
+              <div id="formMessage" class="message wide">The token stays in this browser tab only.</div>
+            </form>
+          </div>
+          <div class="panel"><h3>Latest results</h3><div id="results" class="list"><div class="empty">No completed jobs yet.</div></div></div>
+          <div class="panel"><h3>Live audit events</h3><div id="events" class="list"><div class="empty">No events yet.</div></div></div>
+        </div>
+      </section>
+
+      <section id="workspace-scanner" class="workspace" hidden>
+        <div class="scanner-layout">
+          <div class="panel">
+            <h3>Authorized local scanner</h3>
+            <div class="scanner-target"><div><div class="rings">127.0.0.1</div><p class="sub">Fixed management profile</p></div></div>
+            <form id="scanForm" style="margin-top:13px">
+              <label class="field wide">Operator token<input class="token-input" id="scanToken" type="password" autocomplete="off" placeholder="Same session-only token"></label>
+              <button class="action-button secondary wide" type="submit">Run local scan</button>
+              <div id="scanMessage" class="message wide">Ports: 8765, 16993, 5985, 5986.</div>
+            </form>
+          </div>
+          <div class="panel">
+            <h3>Management listener evidence</h3>
+            <div id="scanResults" class="port-grid"><div class="empty wide">Run the fixed local profile to collect evidence.</div></div>
+            <div id="scanInterpretation" class="scanner-note">A port scan identifies TCP listeners only. It does not prove AMT provisioning, authentication, authorization, or ACPI access.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="workspace-asl" class="workspace" hidden>
+        <div class="asl-mode" role="tablist" aria-label="ASL lab mode">
+          <button class="mode-button active" data-asl-mode="examples" type="button">Hook examples</button>
+          <button class="mode-button" data-asl-mode="patch" type="button">Patch &amp; Upload</button>
+        </div>
+        <div id="aslExamples" class="asl-layout">
+          <div class="panel"><h3>Guardian hooks</h3><div id="hookList" class="hook-list"></div></div>
+          <div class="code-window"><div class="code-bar"><i class="lamp"></i><i class="lamp"></i><i class="lamp"></i><span id="codeTitle">GuardianSSDT.dsl</span></div><pre id="aslCode"></pre></div>
+          <div class="panel">
+            <h3>Method contract</h3>
+            <div id="hookContract" class="contract"></div>
+            <h3 style="margin-top:18px">Pipeline</h3>
+            <div class="pipeline"><div class="pipe-step"><span>1</span>Review exact namespace</div><div class="pipe-step"><span>2</span>Author minimal ASL</div><div class="pipe-step"><span>3</span>Compile with iASL</div><div class="pipe-step"><span>4</span>Validate SSDT + checksum</div><div class="pipe-step"><span>5</span>Package through OEM flow</div></div>
+            <div class="scanner-note">ASL exposes small namespace contracts. Network connectivity and command execution remain in the signed OS agent.</div>
+          </div>
+        </div>
+        <div id="aslPatch" hidden>
+          <div class="stage-boundary"><span>Upload accepts ASL source for review and receipts inside this local lab.</span><b>STAGED ONLY / NOT COMPILED / NOT DEPLOYABLE</b></div>
+          <div class="patch-layout">
+            <div class="panel">
+              <h3>ASL patch source</h3>
+              <form id="aslStageForm" class="patch-form">
+                <label class="field">Choose source file<input id="aslFile" type="file" accept=".dsl,.asl,.txt,text/plain"></label>
+                <label class="field">Staged filename<input id="aslFilename" value="GuardianPatch.dsl" maxlength="96" autocomplete="off"></label>
+                <label class="field wide">Source editor<textarea id="aslSource" class="source-editor" spellcheck="false">DefinitionBlock ("", "SSDT", 2, "GUARDN", "GDNPATCH", 0x00000001)
+{
+    Method (GVER, 0, NotSerialized)
+    {
+        Return (0x00010000)
+    }
+}</textarea></label>
+                <label class="field wide">Patch notes<textarea id="aslNotes" rows="2" maxlength="500" placeholder="What changed and why"></textarea></label>
+                <label class="field wide">Operator token<input class="token-input" id="aslToken" type="password" autocomplete="off" placeholder="Same session-only token"></label>
+                <button id="stageAsl" class="action-button wide" type="submit">Upload to local staging</button>
+                <div id="aslStageMessage" class="message wide">Server validation is authoritative. Maximum source size: 16 KiB.</div>
+              </form>
+            </div>
+            <div>
+              <div class="panel" style="margin-bottom:14px">
+                <h3>Patch analysis</h3>
+                <div class="analysis-grid"><div class="analysis-item"><span class="sub">Bytes</span><b id="aslBytes">0</b></div><div class="analysis-item"><span class="sub">Lines</span><b id="aslLines">0</b></div><div class="analysis-item"><span class="sub">Gate</span><b id="aslGate">CHECK</b></div></div>
+                <div class="sub">Client SHA-256</div><code id="aslClientHash" class="sub">calculating...</code>
+                <div id="aslWarnings" class="warning-list"></div>
+                <h3>Preview against starter</h3>
+                <div id="aslDiff" class="patch-preview" aria-label="ASL patch preview"></div>
+              </div>
+              <div class="panel">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><h3 style="margin:0">Staging receipts</h3><button id="refreshStages" class="replay" type="button">Refresh</button></div>
+                <p class="sub">Each receipt records the server-computed SHA-256 and immutable staged source path.</p>
+                <div id="aslReceipts" class="receipt-list"><div class="empty">Enter the operator token to load receipts.</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="workspace-manuals" class="workspace" hidden>
+        <div class="manual-layout">
+          <div class="panel">
+            <h3>Interactive library</h3>
+            <article class="manual-card active" data-manual="/manuals/The-Rootkit-Arsenal.pdf"><b>The Rootkit Arsenal</b><span>Uploaded historical systems-security reference for authorized defensive study and detection research.</span><a class="manual-link" href="/manuals/The-Rootkit-Arsenal.pdf" target="_blank" rel="noopener">Open full PDF</a></article>
+            <article class="manual-card" data-manual="/manuals/Guardian-ASL-Magic-Interactive-Book.pdf"><b>This PDF Is Magic!</b><span>ASL hooks, examples, boot sequences, and clickable PowerShell-style workflows.</span><a class="manual-link" href="/manuals/Guardian-ASL-Magic-Interactive-Book.pdf" target="_blank" rel="noopener">Open full PDF</a></article>
+            <article class="manual-card" data-manual="/manuals/Hacking-The-Art-of-Exploitation-2nd-Edition.pdf"><b>Hacking: The Art of Exploitation</b><span>Jon Erickson's second edition, available locally for authorized education, secure coding, and defensive research.</span><a class="manual-link" href="/manuals/Hacking-The-Art-of-Exploitation-2nd-Edition.pdf" target="_blank" rel="noopener">Open full PDF</a></article>
+            <article class="manual-card" data-manual="/manuals/Guardian-Remote-Management-Blueprint.pdf"><b>Remote Management Blueprint</b><span>Signed jobs, TPM/mTLS direction, JEA constraints, AMT comparison, and acceptance tests.</span><a class="manual-link" href="/manuals/Guardian-Remote-Management-Blueprint.pdf" target="_blank" rel="noopener">Open full PDF</a></article>
+            <div class="scanner-note">The library is read-only. The uploaded Arsenal remains unchanged and is streamed with PDF byte-range support.</div>
+          </div>
+          <iframe id="pdfFrame" class="pdf-frame" title="Guardian PDF manual" src="/manuals/The-Rootkit-Arsenal.pdf"></iframe>
+        </div>
+      </section>
+      <footer>Arch Angel refresh: 1 second / original heavy-metal intro / fixed diagnostic actions only</footer>
+    </main>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const esc = value => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const ago = timestamp => { const seconds = Math.max(0, Math.round(Date.now()/1000 - timestamp)); return seconds < 2 ? 'now' : `${seconds}s ago`; };
+    let snapshot = null;
+    let introTimer = null;
+
+    const hooks = {
+      GVER: {
+        summary: 'Profile version discovery', args: '0', returns: 'Integer major/minor', side: 'None',
+        code: `DefinitionBlock ("", "SSDT", 2, "GUARDN", "GDNVER00", 0x00000001)\n{\n    Method (GVER, 0, NotSerialized)\n    {\n        // Guardian Generic Hook Profile v1.0\n        Return (0x00010000)\n    }\n}`
+      },
+      GCFG: {
+        summary: 'Static endpoint contract', args: '0', returns: 'Versioned Package', side: 'None',
+        code: `External (\\_SB, DeviceObj)\nScope (\\_SB)\n{\n    Device (GDN0)\n    {\n        Name (_HID, "GDN0001")\n        Name (_UID, One)\n        Method (_STA, 0, NotSerialized) { Return (0x0F) }\n        Method (GCFG, 0, NotSerialized)\n        {\n            Return (Package () { 0x00010000, "read-only", "no writes" })\n        }\n    }\n}`
+      },
+      GQRY: {
+        summary: 'Read-only selector query', args: '1', returns: 'Package by selector', side: 'Read-only',
+        code: `External (\\_SB.GDN0, DeviceObj)\nExternal (\\_SB.GDN0.GCFG, MethodObj, 0)\nScope (\\_SB.GDN0)\n{\n    Method (GQRY, 1, Serialized)\n    {\n        If (LEqual (Arg0, Zero)) { Return (GCFG ()) }\n        If (LEqual (Arg0, One))\n        {\n            Return (Package () { "status", "ready" })\n        }\n        Return (Package () { "error", "unsupported selector" })\n    }\n}`
+      },
+      GEVT: {
+        summary: 'Driver notification bridge', args: '1', returns: '0 handled / 1 unknown', side: 'Notify only',
+        code: `External (\\_SB.GDN0, DeviceObj)\nScope (\\_SB.GDN0)\n{\n    Method (GEVT, 1, Serialized)\n    {\n        If (LEqual (Arg0, One))\n        {\n            Notify (\\_SB.GDN0, 0x80)\n            Return (Zero)\n        }\n        Return (One)\n    }\n}`
+      }
+    };
+
+    function openApp() {
+      clearTimeout(introTimer);
+      $('intro').classList.add('done');
+      $('app').classList.remove('waiting');
+    }
+
+    function playIntro() {
+      $('intro').classList.add('playing');
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        const context = new AudioContextClass();
+        const start = context.currentTime + .08;
+        const compressor = context.createDynamicsCompressor();
+        compressor.threshold.value = -18; compressor.knee.value = 9; compressor.ratio.value = 8; compressor.attack.value = .004; compressor.release.value = .18;
+        const master = context.createGain();
+        master.gain.setValueAtTime(.0001, start);
+        master.gain.exponentialRampToValueAtTime(.48, start + .12);
+        master.gain.setValueAtTime(.48, start + 5.95);
+        master.gain.exponentialRampToValueAtTime(.0001, start + 6.35);
+        master.connect(compressor); compressor.connect(context.destination);
+
+        const curve = amount => {
+          const samples = 44100; const data = new Float32Array(samples); const k = amount; const degree = Math.PI / 180;
+          for (let i=0;i<samples;i++) { const x=i*2/samples-1; data[i]=(3+k)*x*20*degree/(Math.PI+k*Math.abs(x)); }
+          return data;
+        };
+        const guitarGain = context.createGain(); guitarGain.gain.value = .31;
+        const shaper = context.createWaveShaper(); shaper.curve = curve(360); shaper.oversample = '4x';
+        const guitarTone = context.createBiquadFilter(); guitarTone.type='lowpass'; guitarTone.frequency.value=3400; guitarTone.Q.value=.8;
+        guitarGain.connect(shaper); shaper.connect(guitarTone); guitarTone.connect(master);
+        const bassBus = context.createGain(); bassBus.gain.value=.2; bassBus.connect(master);
+
+        const noiseBuffer = context.createBuffer(1, context.sampleRate, context.sampleRate);
+        const noiseData = noiseBuffer.getChannelData(0);
+        for (let i=0;i<noiseData.length;i++) noiseData[i]=Math.random()*2-1;
+
+        const guitarHit = (time, frequency, length=.13, accent=1) => {
+          [-8,8].forEach(detune => {
+            const oscillator=context.createOscillator(); const gain=context.createGain();
+            oscillator.type='sawtooth'; oscillator.frequency.value=frequency; oscillator.detune.value=detune;
+            gain.gain.setValueAtTime(.0001,time); gain.gain.exponentialRampToValueAtTime(.065*accent,time+.008); gain.gain.exponentialRampToValueAtTime(.0001,time+length);
+            oscillator.connect(gain); gain.connect(guitarGain); oscillator.start(time); oscillator.stop(time+length+.02);
+          });
+          if(accent>1.15){
+            const fifth=context.createOscillator(); const fifthGain=context.createGain(); fifth.type='sawtooth'; fifth.frequency.value=frequency*1.498;
+            fifthGain.gain.setValueAtTime(.0001,time); fifthGain.gain.exponentialRampToValueAtTime(.045,time+.008); fifthGain.gain.exponentialRampToValueAtTime(.0001,time+length);
+            fifth.connect(fifthGain); fifthGain.connect(guitarGain); fifth.start(time); fifth.stop(time+length+.02);
+          }
+        };
+        const bassHit = (time, frequency, length=.18) => {
+          const oscillator=context.createOscillator(); const gain=context.createGain(); const filter=context.createBiquadFilter();
+          oscillator.type='square'; oscillator.frequency.value=frequency/2; filter.type='lowpass'; filter.frequency.value=680;
+          gain.gain.setValueAtTime(.0001,time); gain.gain.exponentialRampToValueAtTime(.12,time+.01); gain.gain.exponentialRampToValueAtTime(.0001,time+length);
+          oscillator.connect(filter); filter.connect(gain); gain.connect(bassBus); oscillator.start(time); oscillator.stop(time+length+.02);
+        };
+        const kick = time => {
+          const oscillator=context.createOscillator(); const gain=context.createGain(); oscillator.type='sine';
+          oscillator.frequency.setValueAtTime(145,time); oscillator.frequency.exponentialRampToValueAtTime(43,time+.11);
+          gain.gain.setValueAtTime(.75,time); gain.gain.exponentialRampToValueAtTime(.0001,time+.16);
+          oscillator.connect(gain); gain.connect(master); oscillator.start(time); oscillator.stop(time+.18);
+        };
+        const noiseHit = (time, kind) => {
+          const source=context.createBufferSource(); const filter=context.createBiquadFilter(); const gain=context.createGain(); source.buffer=noiseBuffer;
+          filter.type='highpass'; filter.frequency.value=kind==='snare'?1300:6500;
+          gain.gain.setValueAtTime(kind==='snare'?.23:.07,time); gain.gain.exponentialRampToValueAtTime(.0001,time+(kind==='snare'?.2:.055));
+          source.connect(filter); filter.connect(gain); gain.connect(master); source.start(time); source.stop(time+(kind==='snare'?.22:.07));
+        };
+
+        const root=73.42; const step=.135;
+        const riff=[0,0,3,0,5,0,6,5,0,0,3,0,8,6,5,3];
+        for(let i=0;i<48;i++){
+          const position=i%16; const semitone=riff[position]; const frequency=root*Math.pow(2,semitone/12); const time=start+i*step;
+          const accent=[0,4,8,12].includes(position)?1.35:1;
+          guitarHit(time,frequency,accent>1?.19:.105,accent); bassHit(time,frequency,.15);
+          if([0,3,4,7,8,10,12,14].includes(position)) kick(time);
+          if(position===4||position===12) noiseHit(time,'snare');
+          if(i%2===0) noiseHit(time,'hat');
+        }
+        [293.66,329.63,392,440,392,493.88,587.33].forEach((frequency,index)=>{
+          const time=start+4.72+index*.22; const oscillator=context.createOscillator(); const gain=context.createGain(); const leadShape=context.createWaveShaper();
+          oscillator.type='sawtooth'; oscillator.frequency.value=frequency; leadShape.curve=curve(170); leadShape.oversample='2x';
+          gain.gain.setValueAtTime(.0001,time); gain.gain.exponentialRampToValueAtTime(.055,time+.02); gain.gain.exponentialRampToValueAtTime(.0001,time+.2);
+          oscillator.connect(leadShape); leadShape.connect(gain); gain.connect(master); oscillator.start(time); oscillator.stop(time+.22);
+        });
+        setTimeout(()=>context.close(),7200);
+      }
+      introTimer = setTimeout(openApp, 6400);
+    }
+
+    $('enterLab').addEventListener('click', playIntro);
+    $('skipIntro').addEventListener('click', openApp);
+    $('replayIntro').addEventListener('click', () => { $('intro').classList.remove('done','playing'); $('app').classList.add('waiting'); });
+
+    document.querySelectorAll('.nav-button').forEach(button => button.addEventListener('click', () => {
+      const name = button.dataset.workspace;
+      document.querySelectorAll('.nav-button').forEach(item => item.classList.toggle('active', item === button));
+      document.querySelectorAll('.workspace').forEach(item => { item.hidden = item.id !== `workspace-${name}`; });
+    }));
+
+    function syncTokens(value, source) {
+      document.querySelectorAll('.token-input').forEach(input => { if (input !== source) input.value = value; });
+    }
+    document.querySelectorAll('.token-input').forEach(input => input.addEventListener('input', () => syncTokens(input.value, input)));
+
+    async function refresh() {
+      try {
+        const response = await fetch('/v1/dashboard', {cache:'no-store'});
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        snapshot = await response.json();
+        $('statusDot').className = 'dot ok';
+        $('statusText').textContent = `Live - ${new Date(snapshot.server_time * 1000).toLocaleTimeString()}`;
+        $('deviceCount').textContent = snapshot.devices.length;
+        $('queuedCount').textContent = snapshot.queued;
+        $('outstandingCount').textContent = snapshot.outstanding.length;
+        $('resultCount').textContent = snapshot.results.length;
+        renderDevices(snapshot.devices); renderResults(snapshot.results); renderEvents(snapshot.events);
+      } catch (error) { $('statusDot').className='dot bad'; $('statusText').textContent=`Disconnected - ${error.message}`; }
+    }
+
+    function renderDevices(devices) {
+      const previous = $('device').value;
+      $('device').innerHTML = devices.map(d => `<option value="${esc(d.device_id)}">${esc(d.device_id)}</option>`).join('');
+      if (devices.some(d => d.device_id === previous)) $('device').value = previous;
+      $('devices').innerHTML = devices.length ? devices.map(d => `<div class="device"><strong>${esc(d.device_id)}</strong><span class="sub">seen ${ago(d.last_seen)}</span><span class="sub">Agent ${esc(d.agent_version || 'unknown')}</span><span class="sub">outbound check-in</span><div class="caps">${d.capabilities.map(c => `<span class="tag">${esc(c)}</span>`).join('')}</div></div>`).join('') : '<div class="empty">Waiting for endpoint check-in...</div>';
+    }
+
+    function renderResults(results) {
+      const ordered = [...results].reverse();
+      $('results').innerHTML = ordered.length ? ordered.map(r => `<div class="row ${esc(r.status)}"><strong>${esc(r.action)}</strong> <span class="sub">${esc(r.device_id)} - ${ago(r.completed_at)}</span><div><code>${esc(r.job_id)}</code></div><pre>${esc(JSON.stringify(r.output,null,2))}</pre></div>`).join('') : '<div class="empty">No completed jobs yet.</div>';
+    }
+
+    function renderEvents(events) {
+      const ordered = [...events].reverse();
+      $('events').innerHTML = ordered.length ? ordered.map(e => `<div class="row"><strong>${esc(e.event)}</strong> <span class="sub">${ago(e.timestamp)}</span><pre>${esc(JSON.stringify(e.details))}</pre></div>`).join('') : '<div class="empty">No events yet.</div>';
+    }
+
+    $('action').addEventListener('change', () => { $('messageField').hidden = $('action').value !== 'echo'; });
+    $('jobForm').addEventListener('submit', async event => {
+      event.preventDefault(); const token=$('token').value; const action=$('action').value; const params=action==='echo'?{message:$('echoMessage').value}:{}; const target=$('device').value; const notice=$('formMessage');
+      if (!token || !target) { notice.className='message bad wide'; notice.textContent='Enter the operator token and select a connected device.'; return; }
+      try { const response=await fetch('/v1/jobs',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify({device_id:target,action,params,ttl:60})}); const data=await response.json(); if(!response.ok) throw new Error(data.error||`HTTP ${response.status}`); notice.className='message ok wide'; notice.textContent=`Queued ${action}: ${data.job.job_id}`; await refresh(); }
+      catch(error){ notice.className='message bad wide'; notice.textContent=error.message; }
+    });
+
+    $('scanForm').addEventListener('submit', async event => {
+      event.preventDefault(); const token=$('scanToken').value; const notice=$('scanMessage');
+      if(!token){ notice.className='message bad wide'; notice.textContent='Enter the operator token.'; return; }
+      notice.className='message wide'; notice.textContent='Scanning the fixed loopback profile...';
+      try { const response=await fetch('/v1/scan',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify({profile:'local-management'})}); const data=await response.json(); if(!response.ok) throw new Error(data.error||`HTTP ${response.status}`); renderScan(data); notice.className='message ok wide'; notice.textContent=`Completed at ${new Date(data.scanned_at*1000).toLocaleTimeString()}`; await refresh(); }
+      catch(error){ notice.className='message bad wide'; notice.textContent=error.message; }
+    });
+
+    function renderScan(report) {
+      $('scanResults').innerHTML=report.results.map(item=>`<article class="port"><div class="port-head"><strong>${item.port} / ${esc(item.name)}</strong><span class="state ${item.open?'open':'closed'}">${item.open?'LISTENING':'CLOSED'}</span></div><p class="sub">${esc(item.note)}</p></article>`).join('');
+      $('scanInterpretation').textContent=report.interpretation;
+    }
+
+    const aslStarter = `DefinitionBlock ("", "SSDT", 2, "GUARDN", "GDNPATCH", 0x00000001)
+{
+    Method (GVER, 0, NotSerialized)
+    {
+        Return (0x00010000)
+    }
+}`;
+    const blockedAsl = ['OperationRegion','Field','BankField','IndexField','DataTableRegion','Load','LoadTable','Unload','Fatal','SystemIO','SystemMemory','EmbeddedControl','SMBus','IPMI'];
+    let clientAslBlocked = false;
+
+    function renderAslDiff(source) {
+      const before=aslStarter.split('\n'); const after=source.split('\n'); const lines=[]; const count=Math.max(before.length,after.length);
+      for(let i=0;i<count;i++){
+        const oldLine=before[i]; const newLine=after[i];
+        if(oldLine===newLine) lines.push(`<span class="diff-same">  ${esc(oldLine ?? '') || ' '}</span>`);
+        else {
+          if(oldLine!==undefined) lines.push(`<span class="diff-del">- ${esc(oldLine) || ' '}</span>`);
+          if(newLine!==undefined) lines.push(`<span class="diff-add">+ ${esc(newLine) || ' '}</span>`);
+        }
+      }
+      $('aslDiff').innerHTML=lines.join('<br>');
+    }
+
+    async function analyzeAsl() {
+      const source=$('aslSource').value; const bytes=new TextEncoder().encode(source).length; const findings=[];
+      if(!source.trim()) findings.push({blocked:true,text:'Source is empty.'});
+      if(bytes>16384) findings.push({blocked:true,text:'Source exceeds the 16 KiB staging limit.'});
+      if(!/DefinitionBlock/i.test(source)) findings.push({blocked:true,text:'DefinitionBlock is required.'});
+      if(!/["']SSDT["']/i.test(source)) findings.push({blocked:true,text:'The table signature must be SSDT.'});
+      if((source.match(/{/g)||[]).length!==(source.match(/}/g)||[]).length) findings.push({blocked:true,text:'Braces are not balanced.'});
+      blockedAsl.forEach(name=>{ if(new RegExp(`\\b${name}\\b`,'i').test(source)) findings.push({blocked:true,text:`Blocked hardware/deployment construct: ${name}.`}); });
+      if(/\bNotify\s*\(/i.test(source)) findings.push({blocked:false,text:'Notify is advisory-only; review the target namespace and event contract.'});
+      if(!/\bExternal\s*\(/i.test(source)) findings.push({blocked:false,text:'No External declarations found; confirm referenced namespace objects.'});
+      clientAslBlocked=findings.some(item=>item.blocked);
+      $('aslBytes').textContent=bytes.toLocaleString(); $('aslLines').textContent=source ? source.split('\n').length : 0;
+      $('aslGate').textContent=clientAslBlocked?'BLOCKED':'STAGE'; $('aslGate').style.color=clientAslBlocked?'var(--red)':'var(--green)';
+      $('stageAsl').disabled=clientAslBlocked;
+      $('aslWarnings').innerHTML=findings.length?findings.map(item=>`<div class="warning ${item.blocked?'blocked':''}">${esc(item.text)}</div>`).join(''):'<div class="warning">No client-side findings. The server will validate again.</div>';
+      renderAslDiff(source);
+      try {
+        const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(source));
+        const hash=Array.from(new Uint8Array(digest),value=>value.toString(16).padStart(2,'0')).join('');
+        if(source===$('aslSource').value) $('aslClientHash').textContent=hash;
+      } catch (_) { $('aslClientHash').textContent='Browser SHA-256 unavailable'; }
+    }
+
+    function renderStages(items) {
+      $('aslReceipts').innerHTML=items.length?items.map(item=>`<article class="receipt"><div class="receipt-head"><div><b>${esc(item.filename)}</b><div class="sub">${new Date(item.created_at*1000).toLocaleString()} · ${item.source_bytes} bytes</div></div><span class="stage-badge">STAGED ONLY</span></div><code>SHA-256 ${esc(item.sha256)}</code><div class="sub">compile: ${esc(item.compile_status)} · deployable: ${esc(item.deployable)}</div>${item.notes?`<div class="sub">${esc(item.notes)}</div>`:''}</article>`).join(''):'<div class="empty">No staged ASL patches yet.</div>';
+    }
+
+    async function loadStages() {
+      const token=$('aslToken').value;
+      if(!token){ $('aslReceipts').innerHTML='<div class="empty">Enter the operator token to load receipts.</div>'; return; }
+      try { const response=await fetch('/v1/asl/staged',{headers:{'Authorization':`Bearer ${token}`},cache:'no-store'}); const data=await response.json(); if(!response.ok) throw new Error(data.error||`HTTP ${response.status}`); renderStages(data.items||[]); }
+      catch(error){ $('aslReceipts').innerHTML=`<div class="empty">${esc(error.message)}</div>`; }
+    }
+
+    document.querySelectorAll('[data-asl-mode]').forEach(button=>button.addEventListener('click',()=>{
+      const patch=button.dataset.aslMode==='patch'; document.querySelectorAll('[data-asl-mode]').forEach(item=>item.classList.toggle('active',item===button));
+      $('aslExamples').hidden=patch; $('aslPatch').hidden=!patch; if(patch){ analyzeAsl(); loadStages(); }
+    }));
+    $('aslSource').addEventListener('input',analyzeAsl);
+    $('aslFile').addEventListener('change',async()=>{
+      const file=$('aslFile').files[0]; if(!file) return;
+      $('aslFilename').value=file.name.replace(/\.(asl|txt)$/i,'.dsl'); $('aslSource').value=await file.text(); await analyzeAsl();
+    });
+    $('refreshStages').addEventListener('click',loadStages);
+    $('aslStageForm').addEventListener('submit',async event=>{
+      event.preventDefault(); await analyzeAsl(); const notice=$('aslStageMessage'); const token=$('aslToken').value;
+      if(!token){ notice.className='message bad wide'; notice.textContent='Enter the operator token.'; return; }
+      if(clientAslBlocked){ notice.className='message bad wide'; notice.textContent='Resolve the blocked findings before staging.'; return; }
+      notice.className='message wide'; notice.textContent='Validating and staging source locally...';
+      try { const response=await fetch('/v1/asl/stage',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify({filename:$('aslFilename').value,source:$('aslSource').value,notes:$('aslNotes').value})}); const data=await response.json(); if(!response.ok) throw new Error(data.error||`HTTP ${response.status}`); notice.className='message ok wide'; notice.textContent=`Staged ${data.manifest.filename} · SHA-256 ${data.manifest.sha256.slice(0,16)}… · not compiled`; await loadStages(); await refresh(); }
+      catch(error){ notice.className='message bad wide'; notice.textContent=error.message; }
+    });
+    analyzeAsl();
+
+    function selectHook(name) {
+      const hook=hooks[name]; $('aslCode').textContent=hook.code; $('codeTitle').textContent=`${name}.dsl`;
+      document.querySelectorAll('.hook-button').forEach(button=>button.classList.toggle('active',button.dataset.hook===name));
+      $('hookContract').innerHTML=`<div class="contract-item"><b>Purpose</b><div class="sub">${esc(hook.summary)}</div></div><div class="contract-item"><b>Arguments</b><div class="sub">${esc(hook.args)}</div></div><div class="contract-item"><b>Return</b><div class="sub">${esc(hook.returns)}</div></div><div class="contract-item"><b>Side effect</b><div class="sub">${esc(hook.side)}</div></div>`;
+    }
+    $('hookList').innerHTML=Object.entries(hooks).map(([name,hook])=>`<button class="hook-button" data-hook="${name}" type="button"><b>${name}</b><span>${esc(hook.summary)}</span></button>`).join('');
+    document.querySelectorAll('.hook-button').forEach(button=>button.addEventListener('click',()=>selectHook(button.dataset.hook)));
+    selectHook('GVER');
+
+    document.querySelectorAll('.manual-card').forEach(card=>card.addEventListener('click',event=>{
+      if(event.target.closest('a')) return; document.querySelectorAll('.manual-card').forEach(item=>item.classList.toggle('active',item===card)); $('pdfFrame').src=card.dataset.manual;
+    }));
+
+    refresh(); setInterval(refresh,1000);
+  </script>
+</body>
+</html>
