@@ -1,4 +1,6 @@
 .guardian-remote-lab/
+__pycache__/
+*.py[cod]
 *.pem
 *.key
 *.crt

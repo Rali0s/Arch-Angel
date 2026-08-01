@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Operator client for submitting fixed Guardian Remote Lab actions."""
+"""Operator client for submitting fixed Arch Angel Remote Lab actions."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ def request_json(url: str, token: str, method: str, payload: Optional[Dict[str, 
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Guardian Remote Lab fixed-action operator")
+    parser = argparse.ArgumentParser(description="Arch Angel Remote Lab fixed-action operator")
     parser.add_argument("--controller", default="http://127.0.0.1:8765")
     sub = parser.add_subparsers(dest="command", required=True)
     submit = sub.add_parser("submit")

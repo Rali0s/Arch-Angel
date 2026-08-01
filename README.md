@@ -98,17 +98,17 @@ python .\agent.py --device-id lab-device-01
 Terminal 3 - inspect the device, queue a diagnostic job, then inspect results:
 
 ```powershell
-python .\operator.py devices
-python .\operator.py submit --device-id lab-device-01 --action ping
-python .\operator.py results
+python .\archangel_operator.py devices
+python .\archangel_operator.py submit --device-id lab-device-01 --action ping
+python .\archangel_operator.py results
 ```
 
 Other fixed actions:
 
 ```powershell
-python .\operator.py submit --device-id lab-device-01 --action system_info
-python .\operator.py submit --device-id lab-device-01 --action disk_usage
-python .\operator.py submit --device-id lab-device-01 --action echo --message 'hello from the lab'
+python .\archangel_operator.py submit --device-id lab-device-01 --action system_info
+python .\archangel_operator.py submit --device-id lab-device-01 --action disk_usage
+python .\archangel_operator.py submit --device-id lab-device-01 --action echo --message 'hello from the lab'
 ```
 
 The agent polls every three seconds by default. Use `--once` for one check-in and
